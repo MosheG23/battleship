@@ -47,11 +47,11 @@ op_side = "op"
 
 class Ship:
 
-    def __init__(self, size: int, tile_number: int, side: str, status: str):
+    def __init__(self, size: int, side: str, status: str):
         self.size = size
         self.side = side
-        self.tile_number = tile_number
         self.status = status
+        self.tile_number = list()
         self.up_image = self.set_up_image(status)
         self.side_image = self.set_side_image(status)
         self.sunk = False
@@ -95,10 +95,23 @@ class Ship:
         self.up_image = self.set_up_image(status)
         self.side_image = self.set_side_image(status)
 
+    def get_tile_number(self) -> list:
+        return self.tile_number
+
+    def add_tiles(self, tile: int):
+        self.tile_number.append(tile)
+
     def get_side_img(self):
         return self.side_image
 
-    def put_on_tile(self, tile):
-        self.tile_number = tile
+    def put_on_tile(self):
         self.status = "On_Board"
         self.set_side_image("On_Board")
+
+    def sink_ship(self):
+        self.sunk = True
+
+    def get_sunk(self):
+        return self.sunk
+        self.status = "bombed"
+        self.set_side_image("bombed")

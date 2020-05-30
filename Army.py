@@ -17,7 +17,7 @@ class Army:
         army = [sys.getsizeof(Ship) for i in range(self.get_total_size())]
         for i in range(len(flag)):
             for j in range(flag[i]):
-                army[count] = Ship(i + 1, 0, self.side, "start")
+                army[count] = Ship(i + 1, self.side, "start")
                 count += 1
         return army
 

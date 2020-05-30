@@ -3,6 +3,7 @@ from Tile import Tile
 
 import pygame
 import os
+import random
 
 # Board
 images_path = os.path.dirname(os.path.dirname(__file__)) + "/BattleShip/images/"
@@ -29,12 +30,14 @@ my_battleship = [0 for i in range(number_of_battleship)]
 amount_of_my_battleship = 0
 op_battleship = [0 for i in range(number_of_battleship)]
 amount_of_op_battleship = 8
+sinked = images_path + "sinked/"
+my_sink = [pygame.image.load(sinked + str(i) + "_blue.png") for i in range(1,5)]
+op_sink = [pygame.image.load(sinked + str(i) + "_red.png") for i in range(1,5)]
 # Main Window
 win_x = bg_image.get_width()
 win_y = bg_image.get_height()
 
 class Board:
-    amount_of_ship_placed = 0
 
     def __init__(self, start_x: int, start_y: int, side: str, army: Army,
                  num_of_row: int, num_of_col: int, main_win: pygame.display):
@@ -49,6 +52,7 @@ class Board:
         self.ships_tiles = set()
         self.tiles_checked = set()
         self.set_board()
+        self.amount_of_ship = 0
 
     def set_board(self):
         """
@@ -73,6 +77,9 @@ class Board:
             # y = 175
             x = self.start_x
 
+    def get_amount_of_ship(self):
+        return self.amount_of_ship
+
     def draw_board(self):
         """
         Drawing the board base
@@ -95,6 +102,22 @@ class Board:
         """
         return self.army
 
+    def add_checked_tile(self, pos: int):
+        """
+
+        :param pos:
+        :return:
+        """
+        self.tiles_checked.add(pos)
+
+    def fill_board(self):
+        for i in range(number_of_battleship):
+            curr_size = self.get_army().get_ship_by_pos(i).get_size()
+            tile_to_chose = self.get_available_tiles(curr_size)[
+                random.randint(1, len(self.get_available_tiles(curr_size)) - 1)]
+            # i, j = Board.get_tile_numbers(tile_to_chose)
+            self.put_ship_on_board(tile_to_chose, i)
+
     def put_ship_on_board(self, pos: int, num_of_ship: int):
         """
         Places a ship on the board.
@@ -104,13 +127,13 @@ class Board:
         :return:
         """
         i, j = self.get_tile_numbers(pos)
-        self.board[i][j].place_ship()
-        self.army.get_ship_by_pos(num_of_ship).put_on_tile(pos)
+        self.board[i][j].place_ship(num_of_ship)
         for z in range(self.army.get_ship_by_pos(num_of_ship).get_size()):
-            self.board[i][j + z].place_ship()
-            print(f"{self.army.get_ship_by_pos(num_of_ship).get_size()}-> {self.get_tile_number_i_j(i, j + z)}")
+            self.board[i][j + z].place_ship(num_of_ship)
+            self.get_army().get_ship_by_pos(num_of_ship).add_tiles(pos)
             self.ships_tiles.add(self.get_tile_number_i_j(i, j + z))
-        self.amount_of_ship_placed += 1
+            pos += 1
+        self.amount_of_ship += 1
 
     def get_available_tiles(self, ship_size: int):
         """
@@ -122,14 +145,21 @@ class Board:
         ship_size -= 1
         for i in range(self.num_of_row):
             for j in range(self.num_of_col - ship_size):
-                if not self.board[i][j].get_have_ship():
+                if self.board[i][j].get_have_ship() == -1:
                     flag = 0
                     for s in range(ship_size + 1):
-                        if self.board[i][j + s].get_have_ship():
+                        if self.board[i][j + s].get_have_ship() != -1:
                             flag = 1
                     if flag == 0:
                         available_tiles.append(self.get_tile_number_i_j(i, j))
         return available_tiles
+
+    def get_available_ship_by_pos(self) -> list:
+        result = list()
+        for i in range(self.amount_of_ship):
+            if not self.army.get_ship_by_pos(i).get_sunk():
+                result.append(i)
+        return result
 
     def get_available_to_check(self):
         """
@@ -150,12 +180,42 @@ class Board:
         hit tiles - tile which checked and has a ship
         :return: Array of hit tiles
         """
-        hit_tiles = []
+        hit_tiles = set()
         for tile in self.ships_tiles:
             i, j = self.get_tile_numbers(tile)
             if self.board[i][j].get_checked():
-                hit_tiles.append(tile)
+                hit_tiles.add(tile)
         return hit_tiles
+
+    def get_ship_not_sunk(self) -> list:
+        ships = [0, 0, 0, 0]
+        for i in range(self.amount_of_ship):
+            if not self.army.get_ship_by_pos(i).get_sunk():
+                ships[self.army.get_ship_by_pos(i).get_size() - 1] += 1
+        return ships
+
+    def get_ship_sunk(self) -> list:
+        ships = list()
+        for i in range(self.amount_of_ship):
+            if self.army.get_ship_by_pos(i).get_sunk():
+                ships.append(i)
+        # print(ships)
+        return ships
+
+    def check_ship_sunk(self, pos):
+        """
+
+        :param pos:
+        :return:
+        """
+        curr_ship = self.army.get_ship_by_pos(pos)
+        curr_ship_tiles = set(curr_ship.get_tile_number())
+        # print(curr_ship_tiles)
+        # print(self.tiles_checked)
+        # print(curr_ship_tiles.intersection(self.tiles_checked))
+        if len(curr_ship_tiles.intersection(self.tiles_checked)) == curr_ship.get_size():
+            self.army.get_ship_by_pos(pos).sink_ship()
+            print(pos)
 
     def show_battleship_menu_status(self):
         """
@@ -179,20 +239,37 @@ class Board:
         """
         Showing the battleship on the board
         """
-        for j in range(self.amount_of_ship_placed):
-            curr_ship = self.army.get_ship_by_pos(j)
-            tile_number = curr_ship.tile_number
+        # available_ships = self.get_available_ship_by_pos()
+        if self.side == my_side:
+            for j in range(self.amount_of_ship):
+                # ship_number = available_ships[j]
+                curr_ship = self.army.get_ship_by_pos(j)
+                tile_number = curr_ship.get_tile_number()[0]
+                i, j = Board.get_tile_numbers(tile_number)
+                x, y = self.board[i][j].get_pos()
+                if curr_ship.get_size() == 2:
+                    y += 7
+                    x += 7
+                elif curr_ship.get_size() == 3:
+                    y -= 10
+                    x += 7
+                elif curr_ship.get_size() == 4:
+                    x += 14
+                self.main_win.blit(curr_ship.get_side_img(), (x, y))
+            # print(self.get_ship_sunk())
+        sunk_ships = self.get_ship_sunk()
+        for i in range(len(sunk_ships)):
+            curr_ship = self.army.get_ship_by_pos(sunk_ships[i])
+            tile_number = curr_ship.get_tile_number()[0]
             i, j = Board.get_tile_numbers(tile_number)
             x, y = self.board[i][j].get_pos()
-            if curr_ship.get_size() == 2:
-                y += 7
-                x += 7
-            elif curr_ship.get_size() == 3:
-                y -= 10
-                x += 7
-            elif curr_ship.get_size() == 4:
-                x += 14
-            self.main_win.blit(curr_ship.get_side_img(), (x, y))
+            # print(f"{x}, {y} -> {op_sink[curr_ship.get_size() - 1]}")
+            if self.side == "me":
+                self.main_win.blit(my_sink[curr_ship.get_size() - 1], (x - 3, y - 3))
+            else:
+                self.main_win.blit(op_sink[curr_ship.get_size() - 1], (x - 3, y - 3))
+
+
 
     # Auxiliary functions
 
@@ -220,10 +297,6 @@ class Board:
         :return: mouse position
         """
         return self.board[i][j].get_x(), self.board[i][j].get_y()
-        # if self.side == op_side:
-        #     return self.board[i][j].get_x(), self.board[i][j].get_y()
-        #     # return int((op_rect.left + (tile_width * j))), int((op_rect.top + (tile_height * i)))
-        # return int((my_rect.left + (tile_width * j))), int((my_rect.top + (tile_height * i)))
 
     def get_tile_number_i_j(self, i: int, j: int) -> int:
         """

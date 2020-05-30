@@ -28,7 +28,7 @@ class Tile:
         self.number = number
         self.height = tile_height
         self.width = tile_width
-        self.have_ship = False
+        self.have_ship = -1
         self.checked = False
         self.hit = False
         self.main_win = main_win
@@ -51,14 +51,14 @@ class Tile:
     def get_y(self):
         return self.y
 
-    def get_have_ship(self) -> bool:
+    def get_have_ship(self) -> int:
         return self.have_ship
 
     def get_checked(self) -> bool:
         return self.checked
 
-    def place_ship(self):
-        self.have_ship = True
+    def place_ship(self, ship_number: int):
+        self.have_ship = ship_number
 
     def check_tile(self):
         self.checked = True
