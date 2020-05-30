@@ -41,7 +41,7 @@ icon = pygame.image.load(images_path + 'icon.gif')
 number_of_tiles = 10
 number_of_battleship = 8
 # Game Progress
-game_status = ["Putting ships on my side", "My turn to guess", "My opponent turn to guess", "Game over"]
+game_status = ["Putting player ships", "My turn to guess", "My opponent turn to guess", "Game over"]
 curr_game_status = game_status[0]
 my_checked_tiles = []
 op_checked_tiles = []
@@ -57,7 +57,7 @@ my_rect = pygame.Rect(920, 176, 456, 376)
 my_battleship = [0 for i in range(number_of_battleship)]
 amount_of_my_battleship = 0
 op_battleship = [0 for i in range(number_of_battleship)]
-amount_of_op_battleship = 8
+amount_of_op_battleship = 0
 # Tiles
 tile_height = 37
 tile_width = 44.7
@@ -115,10 +115,39 @@ def board_text():
     par_font = pygame.font.SysFont("Cooper Std", 18)
     title = title_font.render("Game Status", 1, black)
     game_status_label = par_font.render(curr_game_status, 1, black)
-    # turn = par_font.render("Game :", 1, black)
+    # Board Status
+    my_board_tiles_left = par_font.render(f"{len(my_board.get_available_to_check())}", 1, black)
+    op_board_tiles_left = par_font.render(f"{len(op_board.get_available_to_check())}", 1, black)
+    # BattleShips Status
+    my_battleship_ships = my_board.get_ship_not_sunk()
+    my_destroyer = par_font.render(f"{my_battleship_ships[3]}", 1, black)
+    my_carrier = par_font.render(f"{my_battleship_ships[2]}", 1, black)
+    my_submarine = par_font.render(f"{my_battleship_ships[1]}", 1, black)
+    my_cessna = par_font.render(f"{my_battleship_ships[0]}", 1, black)
+    op_battleship_ships = op_board.get_ship_not_sunk()
+    op_destroyer = par_font.render(f"{op_battleship_ships[3]}", 1, black)
+    op_carrier = par_font.render(f"{op_battleship_ships[2]}", 1, black)
+    op_submarine = par_font.render(f"{op_battleship_ships[1]}", 1, black)
+    op_cessna = par_font.render(f"{op_battleship_ships[0]}", 1, black)
+    my_battleship_text = par_font.render(f"{len(my_board.get_available_ship_by_pos())}", 1, black)
+    op_battleship_text = par_font.render(f"{len(op_board.get_available_ship_by_pos())}", 1, black)
+    turn_count = par_font.render(f"{turn}", 1, black)
     # put the label object on the screen at point x=100, y=100
-    main_win.blit(title, (688, 114))
-    main_win.blit(game_status_label, (670, 150))
+    main_win.blit(game_status_label, (685, 156))
+    # My Battleships
+    main_win.blit(my_battleship_text, (753, 377))
+    main_win.blit(my_board_tiles_left, (785, 288))
+    main_win.blit(my_destroyer, (785, 304))
+    main_win.blit(my_carrier, (785, 320))
+    main_win.blit(my_submarine, (785, 336))
+    main_win.blit(my_cessna, (785, 352))
+    main_win.blit(op_battleship_text, (753, 564))
+    main_win.blit(op_board_tiles_left, (785, 475))
+    main_win.blit(op_destroyer, (785, 493))
+    main_win.blit(op_carrier, (785, 509))
+    main_win.blit(op_submarine, (785, 523))
+    main_win.blit(op_cessna, (785, 540))
+    main_win.blit(turn_count, (775, 205))
     # main_win.blit(turn, (685, 150))
 
 
@@ -130,12 +159,13 @@ def mouse_position(mou_pos):
 
 
 def fill_enemy_battleship():
-    global op_board
+    global op_board, amount_of_op_battleship
     for i in range(number_of_battleship):
         curr_size = op_board.get_army().get_ship_by_pos(i).get_size()
         tile_to_chose = op_board.get_available_tiles(curr_size)[random.randint(1, len(op_board.get_available_tiles(curr_size)) - 1)]
         # i, j = Board.get_tile_numbers(tile_to_chose)
         op_board.put_ship_on_board(tile_to_chose, i)
+        amount_of_op_battleship += 1
 
 
 def check_op_square(i: int, j: int):
@@ -159,7 +189,7 @@ def game_init():
     op_battleship = Army(4, 2, 1, 1, op_side)
     my_board = Board(my_rect.left, my_rect.top, my_side, my_battleship, number_of_tiles, number_of_tiles, main_win)
     op_board = Board(op_rect.left, op_rect.top, op_side, op_battleship, number_of_tiles, number_of_tiles, main_win)
-    fill_enemy_battleship()
+    op_board.fill_board()
     op_board.show_battleship_menu_status()
     pygame.display.flip()
 
@@ -171,33 +201,8 @@ def show_game_status():
     my_board.show_battleship_menu_status()
     my_board.show_battleship_board_status()
     op_board.show_battleship_menu_status()
-    # op_board.show_battleship_board_status()
+    op_board.show_battleship_board_status()
     board_text()
-
-
-# Play Game
-# def play(event, x_pos, y_pos):
-#     global turn, my_battleship, op_battleship, amount_of_my_battleship, amount_of_op_battleship, curr_game_status
-#     side = Board.get_side_by_x_y(x_pos, y_pos)
-#     # First Turn
-#     if curr_game_status == game_status[0] and turn <= my_battleship.get_total_size():
-#         no_ship = turn - 1
-#         curr_ship = my_battleship.get_ship_by_pos(no_ship)
-#         my_battleship.get_ship_by_pos(no_ship).set_status("active")
-#         pygame.display.flip()
-#         if event.type == pygame.MOUSEBUTTONDOWN:
-#             x, y = event.pos
-#             if Board.get_side_by_x_y(x, y) == my_side:
-#                 # Set the x, y positions of the mouse click
-#                 i, j = my_board.get_tile_i_j_by_pos(x, y)
-#                 tile_number = my_board.get_tile_number_i_j(i, j)
-#                 if tile_number in my_board.get_available_tiles(curr_ship.get_size()):
-#                     # main_win.blit(curr_ship.get_side_img(), my_board[i][j].get_pos())
-#                     turn += 1
-#                     amount_of_my_battleship += 1
-#                     my_board.put_ship_on_board(tile_number, no_ship)
-#             # if turn > my_battleship.get_total_size():
-#             #     print(str(my_board.get_army().get_ship_by_pos(0).get_status()))
 
 # Running Function
 def run_game():
@@ -213,7 +218,7 @@ def run_game():
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             run = False
-        mouse_position((x, y))
+        # mouse_position((x, y))
 #########################################################################################
 #########################################################################################
 ############################### Status - Player Put Ships ###############################
@@ -223,6 +228,9 @@ def run_game():
             if turn > my_board.get_army().get_total_size():
                 curr_game_status = game_status[1]
             else:
+                if keys[pygame.K_RIGHT]:
+                    my_board.fill_board()
+                    turn = 9
                 if my_rect.collidepoint(pygame.mouse.get_pos()):
                     curr_size = my_board.get_army().get_ship_by_pos(turn - 1).get_size()
                     hover_active_put_ships(curr_size, x, y, my_board)
@@ -253,40 +261,54 @@ def run_game():
 #########################################################################################
 #########################################################################################
         if curr_game_status == game_status[1]:
-            for tile_num in range(len(op_board.get_hit_tiles())):
-                i, j = Board.get_tile_numbers(op_board.get_hit_tiles()[tile_num])
+            for tile in op_board.get_hit_tiles():
+                i, j = Board.get_tile_numbers(tile)
                 main_win.blit(op_hit, (op_board.get_board()[i][j].get_x() - 4, op_board.get_board()[i][j].get_y() - 8))
-            for tile_num in range(len(my_board.get_hit_tiles())):
-                i, j = Board.get_tile_numbers(my_board.get_hit_tiles()[tile_num])
+            for tile in my_board.get_hit_tiles():
+                i, j = Board.get_tile_numbers(tile)
                 main_win.blit(me_hit, (my_board.get_board()[i][j].get_x() - 4, my_board.get_board()[i][j].get_y() - 8))
-            # op_board.show_battleship_board_status()
-            if turn % 2 != 0:
-                if op_rect.collidepoint(pygame.mouse.get_pos()):
-                    hover_active_put_ships(1, x, y, op_board)
-                    x_pos, y_pos = pygame.mouse.get_pos()
-                    hover_check_put_ships(x_pos, y_pos)
-                    pygame.mouse.set_cursor(*bullseye)
-                    for event in pygame.event.get():
-                        if event.type == pygame.MOUSEBUTTONDOWN:
-                            x, y = event.pos
-                            if Board.get_side_by_x_y(x, y) == op_side:
-                                # Set the x, y positions of the mouse click
-                                i, j = op_board.get_tile_i_j_by_pos(x, y)
-                                tile_number = op_board.get_tile_number_i_j(i, j)
-                                if tile_number in op_board.get_available_to_check():
-                                    # op_board.get_board()[i][j].check_tile()
-                                    if not (op_board.get_board()[i][j].check_tile()):
-                                        turn += 1
-                                    op_checked_tiles.append(tile_number)
-                else:
-                    pygame.mouse.set_cursor(*base)
+            if op_board.get_available_ship_by_pos() == 0 or my_board.get_available_ship_by_pos() == 0:
+                curr_game_status = game_status[3]
             else:
-                available_tiles_for_op = my_board.get_available_to_check()
-                tile_number = random.randint(1, len(available_tiles_for_op))
-                tile_to_check = available_tiles_for_op[tile_number - 1]
-                i, j = Board.get_tile_numbers(tile_to_check)
-                if not (my_board.get_board()[i][j].check_tile()):
-                    turn += 1
+                if turn % 2 != 0:
+                    if op_rect.collidepoint(pygame.mouse.get_pos()):
+                        hover_active_put_ships(1, x, y, op_board)
+                        x_pos, y_pos = pygame.mouse.get_pos()
+                        hover_check_put_ships(x_pos, y_pos)
+                        pygame.mouse.set_cursor(*bullseye)
+                        for event in pygame.event.get():
+                            if event.type == pygame.MOUSEBUTTONDOWN:
+                                x, y = event.pos
+                                if Board.get_side_by_x_y(x, y) == op_side:
+                                    # Set the x, y positions of the mouse click
+                                    i, j = op_board.get_tile_i_j_by_pos(x, y)
+                                    tile_number = op_board.get_tile_number_i_j(i, j)
+                                    if tile_number in op_board.get_available_to_check():
+                                        op_board.get_board()[i][j].check_tile()
+                                        op_board.add_checked_tile(tile_number)
+                                        if (op_board.get_board()[i][j].get_have_ship() == -1):
+                                            turn += 1
+                                        else:
+                                            op_board.check_ship_sunk(op_board.get_board()[i][j].get_have_ship())
+                                        op_checked_tiles.append(tile_number)
+                    else:
+                        pygame.mouse.set_cursor(*base)
+                else:
+                    available_tiles_for_op = my_board.get_available_to_check()
+                    tile_number = random.randint(1, len(available_tiles_for_op))
+                    tile_to_check = available_tiles_for_op[tile_number - 1]
+                    i, j = Board.get_tile_numbers(tile_to_check)
+                    my_board.get_board()[i][j].check_tile()
+                    my_board.add_checked_tile(tile_to_check)
+                    if (my_board.get_board()[i][j].get_have_ship() == -1):
+                        turn += 1
+                    else:
+                        my_board.check_ship_sunk(my_board.get_board()[i][j].get_have_ship())
+#########################################################################################
+#########################################################################################
+################################## Status - Finish Game #################################
+#########################################################################################
+#########################################################################################
         # op_rect = pygame.Rect(142, 176, 456, 376) (598, 552)
         # my_rect = pygame.Rect(775, 176, 456, 376) (1231, 552)
         for event in pygame.event.get():
@@ -299,7 +321,6 @@ def run_game():
 
 def main():
     run_game()
-    # print(str(computer_info['width']) + ", " + str(computer_info['height']))
 
 
 if __name__ == "__main__":
